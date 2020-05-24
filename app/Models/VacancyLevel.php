@@ -21,4 +21,9 @@ class VacancyLevel
         }
         return '◎';
     }
+
+    public function __toString()
+    {
+        return $this->mark();
+    }
 }
