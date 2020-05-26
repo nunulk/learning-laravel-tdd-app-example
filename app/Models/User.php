@@ -52,14 +52,21 @@ class User extends Authenticatable
             ->count();
     }
 
-    public function canReserve(Lesson $lesson): bool
+    /**
+     * @param Lesson $lesson
+     * @return void
+     * @throws \Exception
+     */
+    public function canReserve(Lesson $lesson): void
     {
         if ($lesson->remainingCount() === 0) {
-            return false;
+            throw new \Exception('レッスンの予約可能上限に達しています。');
         }
         if ($this->plan === 'gold') {
-            return true;
+            return;
         }
-        return $this->reservationCountThisMonth() < 5;
+        if ($this->reservationCountThisMonth() === 5) {
+            throw new \Exception('今月の予約がプランの上限に達しています。');
+        }
     }
 }
