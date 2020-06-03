@@ -5,13 +5,16 @@ namespace Tests\Feature\Http\Controllers;
 use App\Models\Lesson;
 use App\Models\Reservation;
 use App\Models\User;
+use App\Models\UserProfile;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Response;
+use Tests\Factories\Traits\CreatesUser;
 use Tests\TestCase;
 
 class LessonControllerTest extends TestCase
 {
     use RefreshDatabase;
+    use CreatesUser;
 
     /**
      * @param int $capacity
@@ -25,10 +28,11 @@ class LessonControllerTest extends TestCase
         $lesson = factory(Lesson::class)->create(['name' => '楽しいヨガレッスン', 'capacity' => $capacity]);
         for ($i = 0; $i < $reservationCount; $i++) {
             $user = factory(User::class)->create();
+            factory(UserProfile::class)->create(['user_id' => $user->id]);
             factory(Reservation::class)->create(['lesson_id' => $lesson->id, 'user_id' => $user->id]);
         }
 
-        $user = factory(User::class)->create();
+        $user = $this->createUser();
         $this->actingAs($user);
 
         $response = $this->get("/lessons/{$lesson->id}");
