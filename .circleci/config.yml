@@ -1,0 +1,69 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: circleci/php:7.3-cli
+        environment:
+          - TZ=Asia/Tokyo
+          - LOCALE=ja
+          - LANG=ja_JP.UTF-8
+          - DB_TESTING_HOST=127.0.0.1
+          - DB_TESTING_DATABASE=learning_laravel_tdd_testing
+          - DB_TESTING_USERNAME=root
+          - DB_TESTING_PASSWORD=root
+          - MAIL_DRIVER=log
+          - APP_ENV=testing
+          - APP_URL=http://localhost
+          - APP_KEY=base64:isMYuRWKmB5CUL6UKvrh6R0flMkh4qtN5sA9kMGwPow=
+
+      - image: circleci/mysql:8.0-ram
+        command: |
+          mysqld --default-authentication-plugin=mysql_native_password
+        environment:
+          - MYSQL_DATABASE=learning_laravel_tdd_testing
+          - MYSQL_ROOT_PASSWORD=root
+          - MYSQL_ROOT_HOST=%
+          - TZ=Asia/Tokyo
+
+    steps:
+      - checkout
+
+      - run:
+          name: Install
+          command: |
+            sudo apt update
+            sudo docker-php-ext-install intl pdo_mysql mbstring zip bcmath
+            # timezone
+            sudo cp -f /usr/share/zoneinfo/Asia/Tokyo /etc/localtime
+            # locale
+            echo 'ja_JP.UTF-8 UTF-8' | sudo tee -a  /etc/locale.gen
+            echo "date.timezone = Asia/Tokyo" | sudo tee /usr/local/etc/php/conf.d/date.ini
+            sudo locale-gen
+            sudo update-locale LANG=ja_JP.UTF-8
+
+      - restore_cache:
+          keys:
+            - v1-dependencies-{{ checksum "composer.json" }}
+            - v1-dependencies-
+
+      - run: composer install -n --prefer-dist
+
+      - save_cache:
+          key: v1-dependencies-{{ checksum "composer.json" }}
+          paths:
+            - ./vendor
+
+      - run:
+          name: Prepare Database
+          command: |
+            # wait for db
+            dockerize -wait tcp://127.0.0.1:3306 -timeout 1m
+
+      - run:
+          name: Run tests
+          command: |
+            php artisan test
+
+      - store_artifacts:
+          path: ./storage/logs/laravel.log
+          destination: /tmp/artifacts/laravel.log
